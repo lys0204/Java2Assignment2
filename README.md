@@ -1,39 +1,90 @@
-# CS209A Assignment 2 Demo
+# QQ Farm Demo (Networked Version)
 
-## Environment
+CS209A Assignment 2 - Multiplayer QQ Farm
 
-**java JDK**: openjdk-22 (Oracle OpenJDK 22.0.2)
+A networked multiplayer farm game using **Java Socket** for communication and **JavaFX** for the graphical interface. This project has been refactored from a single-player demo into a full Client-Server (C/S) architecture.
 
-**javafx-fxml**: 22.0.1
+## 📋 Features
 
-**javafx-controls**: 22.0.1
+- **Client-Server Architecture**: 
+  - Centralized server maintains the state of all players.
+  - Clients communicate via TCP Sockets using a custom text-based protocol.
+- **Multiplayer Support**: 
+  - Multiple clients can connect simultaneously.
+  - Each player has their own farm state (Coins, Plots).
+- **Core Gameplay**:
+  - **Plant**: Spend coins to plant crops (takes 10s to mature).
+  - **Harvest**: Collect ripe crops for profit.
+  - **Steal**: Visit other players' farms and steal 25% of their crop yield.
+- **Concurrency & Thread Safety**:
+  - Server uses `ConcurrentHashMap` and `synchronized` methods to handle concurrent requests (e.g., multiple players stealing the same crop at the same time).
+- **Real-time Updates**:
+  - Clients automatically refresh the view every second to show crop growth progress.
 
-**maven**: 3.8.5
+## 🛠 Environment
 
-## File List
+- **Java JDK**: 17 or higher
+- **Maven**: 3.8+
+- **JavaFX**: 17.0.6 (Dependencies managed via Maven)
 
-**Application.java**: the main entry point of the demo application
+## 🚀 How to Run
 
-**Game.java**: manages the game logic and controls the game's behavior
+### 1. Start the Server
+Run the `FarmServer` class first. It will listen on port **8888**.
 
-**Controller.java**: handles JavaFX UI interactions and events
+```bash
+# Run via IDE or Maven
+src/main/java/org/example/demo/server/FarmServer.java
+```
 
-**board.fxml**: a game board prototype
+### 2. Start Clients
+Run the `Application` class. You can launch multiple instances to simulate different players.
 
-**resources**: stores pictures for the game board (https://www.iconfont.cn/)
+```bash
+src/main/java/org/example/demo/Application.java
+```
 
-## Logic
+1. Upon launching, a dialog will ask for a **Username** (e.g., `Alice`).
+2. The main game window will appear.
+3. Launch another instance and log in as `Bob`.
 
-- game start: allowing the user to select options and set up the game board
+### 3. How to Play
 
-- operations validity: monitoring user actions, validating operations, and updating the board
+- **My Farm**: 
+  - Click an empty plot -> Click **Plant** (Cost: 5 coins).
+  - Wait 10 seconds for the crop to change from `Growing` to `Ripe`.
+  - Click the ripe crop -> Click **Harvest** (Reward: 12 coins).
 
-- game finish: informing the user that the game has ended
+- **Visit & Steal**:
+  - In the top bar, enter a friend's name (e.g., `Alice`) and click **Go**.
+  - You will see Alice's farm status.
+  - If Alice has ripe crops, select a plot and click **Steal**.
+  - You will gain coins, and Alice's crop yield will decrease.
+  - Click **Home** to return to your own farm.
 
-## Notes
+## 📡 Communication Protocol
 
-I suggest that you first complete the single-player mode. If you feel confident, you can directly reconstruct this project to include a two-player mode.
+The client and server communicate using simple text commands:
 
-If you encounter any GUI issues while rendering multiple game boards, maybe you can check the $start$ method in the main entry point.
+| Command | Format | Description |
+|---------|--------|-------------|
+| **LOGIN** | `LOGIN <username>` | Register/Login to the server. |
+| **PLANT** | `PLANT <row> <col>` | Plant a crop at (r, c). |
+| **HARVEST**| `HARVEST <row> <col>` | Harvest a crop at (r, c). |
+| **STEAL** | `STEAL <target> <r> <c>`| Steal from target user. |
+| **QUERY** | `QUERY [username]` | Get farm state of self or others. |
 
-If you have any questions or find any bugs, feel free to contact me 12442018@mail.sustech.edu.cn or QQ:503652093 :)
+**Server Response (State)**:
+`STATE <coins>|<cell_0_0>,<cell_0_1>...`
+- Example: `STATE 45|RIPE:4,GROWING:0,EMPTY,EMPTY...`
+
+## 📂 Project Structure
+
+- `org.example.demo.server`
+  - `FarmServer`: Entry point for the server.
+  - `ClientHandler`: Handles individual client connections.
+- `org.example.demo`
+  - `Application`: Entry point for the JavaFX client.
+  - `Controller`: Handles UI events and refreshes.
+  - `NetworkClient`: Manages socket connection and background listening.
+  - `Game`: Shared logic class (now used primarily on Server).
