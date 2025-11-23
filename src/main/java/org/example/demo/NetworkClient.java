@@ -14,12 +14,24 @@ public class NetworkClient {
     private PrintWriter out;
     private BufferedReader in;
     private volatile boolean running = false;
+    
+    // Save connection details for reconnection
+    private String host;
+    private int port;
 
     // Callbacks for UI updates
     private Consumer<String> onStateReceived;
     private Consumer<String> onMessageReceived;
+    // Special callback to notify UI about connection loss specifically
+    private Runnable onConnectionLost;
 
     public void connect(String host, int port) throws IOException {
+        this.host = host;
+        this.port = port;
+        
+        // Clean up previous connection if exists
+        close();
+        
         socket = new Socket(host, port);
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -30,6 +42,10 @@ public class NetworkClient {
         listener.setDaemon(true);
         listener.start();
     }
+    
+    public boolean isConnected() {
+        return running && socket != null && !socket.isClosed();
+    }
 
     public void setOnStateReceived(Consumer<String> onStateReceived) {
         this.onStateReceived = onStateReceived;
@@ -38,18 +54,29 @@ public class NetworkClient {
     public void setOnMessageReceived(Consumer<String> onMessageReceived) {
         this.onMessageReceived = onMessageReceived;
     }
+    
+    public void setOnConnectionLost(Runnable onConnectionLost) {
+        this.onConnectionLost = onConnectionLost;
+    }
 
     private void listen() {
+        System.out.println("[" + Thread.currentThread().getName() + "] Network listener started");
         try {
             String line;
             while (running && (line = in.readLine()) != null) {
                 final String msg = line;
                 Platform.runLater(() -> processMessage(msg));
             }
+            // If loop exits normally (line == null), it means server closed connection
+            if (running) {
+                 throw new IOException("Server closed connection");
+            }
         } catch (IOException e) {
             if (running) {
+                running = false;
                 Platform.runLater(() -> {
                     if (onMessageReceived != null) onMessageReceived.accept("Connection lost: " + e.getMessage());
+                    if (onConnectionLost != null) onConnectionLost.run();
                 });
             }
         }
@@ -92,8 +119,15 @@ public class NetworkClient {
     }
 
     private void send(String cmd) {
-        if (out != null) {
+        if (out != null && running) {
             out.println(cmd);
+            if (out.checkError()) { // Check if write failed
+                 running = false;
+                 Platform.runLater(() -> {
+                     if (onMessageReceived != null) onMessageReceived.accept("Write failed: Connection lost");
+                     if (onConnectionLost != null) onConnectionLost.run();
+                 });
+            }
         }
     }
 
@@ -105,5 +139,7 @@ public class NetworkClient {
             // ignore
         }
     }
+    
+    public String getHost() { return host; }
+    public int getPort() { return port; }
 }
-

@@ -23,11 +23,11 @@ public class FarmServer {
 
     public void start() {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            System.out.println("Farm Server started on port " + PORT);
+            System.out.println("[" + Thread.currentThread().getName() + "] Farm Server started on port " + PORT);
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("New client connected: " + clientSocket.getInetAddress());
+                System.out.println("[" + Thread.currentThread().getName() + "] New client connected: " + clientSocket.getInetAddress());
                 // 为每个客户端启动一个处理线程
                 threadPool.execute(new ClientHandler(clientSocket, this));
             }

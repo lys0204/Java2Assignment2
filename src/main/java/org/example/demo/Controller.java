@@ -29,6 +29,8 @@ public class Controller {
     private Button harvestButton;
     @FXML
     private Button stealButton;
+    @FXML
+    private Button reconnectButton;
 
     private NetworkClient client;
     private String myUsername;
@@ -64,11 +66,47 @@ public class Controller {
     private void setupNetworkCallbacks() {
         client.setOnStateReceived(this::updateBoardFromState);
         client.setOnMessageReceived(this::updateStatus);
+        client.setOnConnectionLost(this::handleConnectionLost);
+    }
+    
+    private void handleConnectionLost() {
+        updateStatus("CONNECTION LOST!");
+        plantButton.setDisable(true);
+        harvestButton.setDisable(true);
+        stealButton.setDisable(true);
+        reconnectButton.setDisable(false); // Enable reconnect button
+    }
+    
+    @FXML
+    private void handleReconnect() {
+        updateStatus("Attempting to reconnect...");
+        reconnectButton.setDisable(true);
+        
+        new Thread(() -> {
+            try {
+                client.connect(client.getHost(), client.getPort());
+                // Re-login
+                client.sendLogin(myUsername);
+                // Re-query
+                client.sendQuery(viewingUser);
+                
+                // Back to UI thread to update
+                javafx.application.Platform.runLater(() -> {
+                    updateStatus("Reconnected successfully!");
+                    updateButtonStates();
+                });
+            } catch (Exception e) {
+                javafx.application.Platform.runLater(() -> {
+                    updateStatus("Reconnect failed: " + e.getMessage());
+                    reconnectButton.setDisable(false); // Retry allowed
+                });
+            }
+        }).start();
     }
     
     private void startAutoRefresh() {
         refreshTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
-            if (client != null && viewingUser != null) {
+            if (client != null && client.isConnected() && viewingUser != null) {
                  client.sendQuery(viewingUser);
             }
         }));

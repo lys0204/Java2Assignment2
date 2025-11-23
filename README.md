@@ -1,90 +1,79 @@
-# QQ Farm Demo (Networked Version)
+# QQ Farm (Networked Version)
 
-CS209A Assignment 2 - Multiplayer QQ Farm
+**Course**: Java Assignment 2  
+**Assignment**: A2 - Multiplayer QQ Farm
 
-A networked multiplayer farm game using **Java Socket** for communication and **JavaFX** for the graphical interface. This project has been refactored from a single-player demo into a full Client-Server (C/S) architecture.
+## 1. Project Overview
 
-## 📋 Features
+This project implements a networked multiplayer version of the QQ Farm game using a Client-Server architecture. It demonstrates key Java concepts including Socket programming, Multithreading, Thread Safety (Concurrency Control), and JavaFX GUI development.
 
-- **Client-Server Architecture**: 
-  - Centralized server maintains the state of all players.
-  - Clients communicate via TCP Sockets using a custom text-based protocol.
-- **Multiplayer Support**: 
-  - Multiple clients can connect simultaneously.
-  - Each player has their own farm state (Coins, Plots).
-- **Core Gameplay**:
-  - **Plant**: Spend coins to plant crops (takes 10s to mature).
-  - **Harvest**: Collect ripe crops for profit.
-  - **Steal**: Visit other players' farms and steal 25% of their crop yield.
-- **Concurrency & Thread Safety**:
-  - Server uses `ConcurrentHashMap` and `synchronized` methods to handle concurrent requests (e.g., multiple players stealing the same crop at the same time).
-- **Real-time Updates**:
-  - Clients automatically refresh the view every second to show crop growth progress.
+The system consists of a centralized server that maintains the state of all players and multiple thin clients that communicate with the server via TCP sockets.
 
-## 🛠 Environment
+## 2. Features
 
-- **Java JDK**: 17 or higher
-- **Maven**: 3.8+
-- **JavaFX**: 17.0.6 (Dependencies managed via Maven)
+*   **Client-Server Architecture**: Separation of game logic (Server) and user interface (Client).
+*   **Multiplayer Interaction**: Multiple clients can connect simultaneously. Players can visit other farms and steal crops.
+*   **Concurrency Control**: Uses `synchronized` blocks and `ConcurrentHashMap` to ensure thread safety, preventing race conditions during concurrent steal attempts.
+*   **Resilience**: Handles network disconnections gracefully with a reconnect mechanism.
+*   **Real-time Updates**: Clients automatically poll the server to reflect crop growth and state changes.
 
-## 🚀 How to Run
+## 3. Environment Requirements
 
-### 1. Start the Server
-Run the `FarmServer` class first. It will listen on port **8888**.
+*   **JDK**: Java 17 or higher
+*   **Build Tool**: Maven 3.8+
+*   **GUI Framework**: JavaFX 17.0.6
+
+## 4. How to Run
+
+### Step 1: Start the Server
+Run the `FarmServer` class first. It listens on port **8888**.
 
 ```bash
-# Run via IDE or Maven
-src/main/java/org/example/demo/server/FarmServer.java
+# Main Class: org.example.demo.server.FarmServer
 ```
 
-### 2. Start Clients
-Run the `Application` class. You can launch multiple instances to simulate different players.
+### Step 2: Start Clients
+Run the `Application` class. You can launch multiple instances.
 
 ```bash
-src/main/java/org/example/demo/Application.java
+# Main Class: org.example.demo.Application
 ```
 
-1. Upon launching, a dialog will ask for a **Username** (e.g., `Alice`).
-2. The main game window will appear.
-3. Launch another instance and log in as `Bob`.
+1.  Enter a **Username** (e.g., "Alice") in the login dialog.
+2.  The game board will appear.
+3.  Start another instance and login as "Bob" to test interactions.
 
-### 3. How to Play
+### Step 3: Gameplay Instructions
+*   **My Farm**: Select an empty plot and click **Plant**. Wait 10 seconds for it to ripen, then click **Harvest**.
+*   **Visit & Steal**: Enter a friend's name in the top bar and click **Go**. Select a ripe crop and click **Steal**.
+*   **Reconnect**: If the server crashes, click the **Reconnect** button to restore the session.
 
-- **My Farm**: 
-  - Click an empty plot -> Click **Plant** (Cost: 5 coins).
-  - Wait 10 seconds for the crop to change from `Growing` to `Ripe`.
-  - Click the ripe crop -> Click **Harvest** (Reward: 12 coins).
+## 5. Protocol Description
 
-- **Visit & Steal**:
-  - In the top bar, enter a friend's name (e.g., `Alice`) and click **Go**.
-  - You will see Alice's farm status.
-  - If Alice has ripe crops, select a plot and click **Steal**.
-  - You will gain coins, and Alice's crop yield will decrease.
-  - Click **Home** to return to your own farm.
+The communication uses a simple line-based text protocol over TCP.
 
-## 📡 Communication Protocol
+**Request Format**: `COMMAND [ARG1] [ARG2] ...`
 
-The client and server communicate using simple text commands:
+| Command | Arguments | Description |
+| :--- | :--- | :--- |
+| `LOGIN` | `username` | Register or login to the server. |
+| `PLANT` | `row` `col` | Plant a crop at the specified coordinates. |
+| `HARVEST` | `row` `col` | Harvest a crop at the specified coordinates. |
+| `STEAL` | `target_user` `row` `col` | Steal crop from a target player. |
+| `QUERY` | `[username]` | Query farm state (self or others). |
 
-| Command | Format | Description |
-|---------|--------|-------------|
-| **LOGIN** | `LOGIN <username>` | Register/Login to the server. |
-| **PLANT** | `PLANT <row> <col>` | Plant a crop at (r, c). |
-| **HARVEST**| `HARVEST <row> <col>` | Harvest a crop at (r, c). |
-| **STEAL** | `STEAL <target> <r> <c>`| Steal from target user. |
-| **QUERY** | `QUERY [username]` | Get farm state of self or others. |
+**Response Format**:
+*   Success: `SUCCESS <message>`
+*   Error: `ERROR <message>`
+*   State Data: `STATE <coins>|<cell_0_0>,<cell_0_1>...`
 
-**Server Response (State)**:
-`STATE <coins>|<cell_0_0>,<cell_0_1>...`
-- Example: `STATE 45|RIPE:4,GROWING:0,EMPTY,EMPTY...`
+## 6. Project Structure
 
-## 📂 Project Structure
-
-- `org.example.demo.server`
-  - `FarmServer`: Entry point for the server.
-  - `ClientHandler`: Handles individual client connections.
-- `org.example.demo`
-  - `Application`: Entry point for the JavaFX client.
-  - `Controller`: Handles UI events and refreshes.
-  - `NetworkClient`: Manages socket connection and background listening.
-  - `Game`: Shared logic class (now used primarily on Server).
+*   `org.example.demo.server`
+    *   `FarmServer`: Server entry point, thread pool management.
+    *   `ClientHandler`: Handles individual client connections (Runnable).
+*   `org.example.demo`
+    *   `Application`: JavaFX client entry point.
+    *   `Controller`: GUI logic and event handling.
+    *   `NetworkClient`: Socket management and background listening.
+    *   `Game`: Shared data model and logic (used by Server).

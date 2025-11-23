@@ -36,7 +36,6 @@ public class ClientHandler implements Runnable {
             try {
                 socket.close();
             } catch (IOException e) {
-                // ignore
             }
         }
     }
@@ -46,6 +45,9 @@ public class ClientHandler implements Runnable {
         String command = parts[0].toUpperCase();
 
         try {
+            // Log current thread
+            System.out.println("[" + Thread.currentThread().getName() + "] Handling: " + cmdLine);
+
             switch (command) {
                 case "LOGIN": // LOGIN <username>
                     if (parts.length < 2) {
@@ -78,8 +80,7 @@ public class ClientHandler implements Runnable {
             }
         } catch (Exception e) {
             out.println("ERROR " + e.getMessage());
-            // Just log the error message to server console instead of full stack trace
-            System.out.println("Command error (" + command + "): " + e.getMessage());
+            System.out.println("[" + Thread.currentThread().getName() + "] Command error (" + command + "): " + e.getMessage());
         }
     }
 
@@ -110,8 +111,6 @@ public class ClientHandler implements Runnable {
     }
     
     private void handleQuery(String[] parts) {
-        // If querying self (or no arg provided), query currentUser.
-        // If querying others, use arg.
         String targetUser;
         if (parts.length > 1) {
             targetUser = parts[1];
@@ -157,12 +156,9 @@ public class ClientHandler implements Runnable {
              out.println("ERROR Target user not found");
              return;
          }
-         
-         // Atomic steal on target
          int stolenAmount = targetGame.steal(row, col);
          
          if (stolenAmount > 0) {
-             // Add to my coins
              Game myGame = server.getPlayer(currentUser);
              myGame.addCoins(stolenAmount);
              out.println("SUCCESS Stole " + stolenAmount + " from " + targetUser);

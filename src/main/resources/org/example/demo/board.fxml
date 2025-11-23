@@ -20,6 +20,7 @@
       <TextField fx:id="friendField" promptText="Friend Name" prefWidth="100"/>
       <Button text="Go" onAction="#handleVisit" />
       <Button text="Home" onAction="#handleBackHome" />
+      <Button fx:id="reconnectButton" text="Reconnect" onAction="#handleReconnect" disable="true" style="-fx-text-fill: red;"/>
   </HBox>
 
   <!-- Status bar: coins + status message -->
